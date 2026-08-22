@@ -13,12 +13,13 @@ usage() {
 setup_scheduler() {
   (
   cd src || exit 1
+  ./deps.sh
   ./build.sh
   )
   chmod +x src/bin/hiku
 
   if [ "$mode" == "cloud" ]; then
-    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_rsa src/bin/hiku ec2-user@"$scheduler_url":~
+    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_rsa src/bin/hiku ubuntu@"$scheduler_url":~
   fi
 }
 
@@ -30,10 +31,12 @@ setup_workers() {
   mode=$5
 
   if [ "$mode" == "cloud" ]; then
-    yum install -y docker
+    apt-get update && apt-get install -y docker.io
     systemctl start docker
     gpasswd -a $USER docker
     docker load -i ol-min.tar
+
+    enable_cgroup_nesting
 
     # https://grafana.com/docs/k6/latest/testing-guides/running-large-tests/
     sysctl -w net.ipv4.tcp_tw_reuse=1
@@ -47,7 +50,7 @@ setup_workers() {
   # Update worker config
   if ! command -v jq &> /dev/null; then
     if [ "$mode" == "cloud" ]; then
-      sudo yum install -y jq
+      sudo apt-get install -y jq
     else
       sudo apt-get install -y jq
     fi
@@ -126,13 +129,17 @@ fi
 
 # Retrieve worker URL
 if [ "$mode" == "cloud" ]; then
-  cd terraform || exit 1
+  cd terraform-gcp || exit 1
   scheduler_url=$(terraform output -raw scheduler_url)
   worker_url=$(terraform output worker_url | tr -d '[]\n'\''" ')
+  scheduler_internal=$(terraform output -raw scheduler_internal)
+  worker_internal=$(terraform output worker_internal | tr -d '[]\n'\''" ')
   cd ..
 
   worker_url_list=()
   IFS=',' read -r -a worker_url_list <<< "$worker_url"
+  worker_internal_list=()
+  IFS=',' read -r -a worker_internal_list <<< "$worker_internal"
 else
   scheduler_url="localhost"
   worker_url_list=()
@@ -145,15 +152,17 @@ setup_scheduler
 
 # Setup workers
 chmod +x openlambda
+if [ "$mode" == "cloud" ]; then
+  docker save ol-min > ol-min.tar
+fi
 for (( i=0; i<n_workers; i++ )); do
   random_str=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 10 | head -n 1)
 
   {
     if [ "$mode" == "cloud" ]; then
-      docker save ol-min > ol-min.tar
-      scp -C -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_rsa openlambda ol-min.tar ec2-user@"${worker_url_list[i]}":~
-      ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_rsa ec2-user@"${worker_url_list[i]}" \
-        "sudo bash -c '$(declare -f setup_workers); setup_workers $random_str ${worker_url_list[i]} $scheduler_url $i $mode'"
+      scp -C -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_rsa openlambda ol-min.tar ubuntu@"${worker_url_list[i]}":~
+      ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_rsa ubuntu@"${worker_url_list[i]}" \
+        "sudo bash -c '$(declare -f enable_cgroup_nesting setup_workers); setup_workers $random_str ${worker_internal_list[i]} $scheduler_internal $i $mode'"
     else
       enable_cgroup_nesting
       setup_workers "$random_str" "localhost" "localhost" "$i" "$mode"
@@ -173,10 +182,10 @@ for (( i=0; i<n_workers; i++ )); do
 
       if [ "$mode" == "cloud" ]; then
           # Copy the benchmark directory
-          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_rsa -r "$benchmark" ec2-user@"${worker_url_list[i]}":~/temp_benchmark
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_rsa -r "$benchmark" ubuntu@"${worker_url_list[i]}":~/temp_benchmark
 
           # Create multiple copies
-          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_rsa ec2-user@"${worker_url_list[i]}" "
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_rsa ubuntu@"${worker_url_list[i]}" "
               for j in \$(seq 0 $((n_copies-1))); do
                   mkdir -p worker-${random_str}/registry/\$(basename $benchmark)-\$j
                   cp -r ~/temp_benchmark/. worker-${random_str}/registry/\$(basename $benchmark)-\$j
@@ -190,17 +199,18 @@ done
 wait
 
 # Create balancer configs
+rm -rf worker_config
 mkdir -p worker_config
 for balancer in hashing-bounded least-connections pull-based random; do
   echo "{
-  \"host\": \"${scheduler_url}\",
+  \"host\": \"0.0.0.0\",
   \"port\": 9020,
   \"balancer\": \"${balancer}\",
   \"workers\": [" >> "worker_config/${balancer}.json"
 
   # Generate worker list
   for ((i = 0; i < n_workers; i++)); do
-    worker_url="http://${worker_url_list[i]}":"$((5000 + i))"
+    worker_url="http://${worker_internal_list[i]}":"$((5000 + i))"
 
     if [[ $i -ne n_workers-1 ]]; then
       separator=","
@@ -214,8 +224,8 @@ for balancer in hashing-bounded least-connections pull-based random; do
 done
 
 if [ "$mode" == "cloud" ]; then
-  ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_rsa ec2-user@"$scheduler_url" "mkdir worker_config"
-  scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_rsa worker_config/* ec2-user@"$scheduler_url":~/worker_config/
+  ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_rsa ubuntu@"$scheduler_url" "mkdir worker_config"
+  scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_rsa worker_config/* ubuntu@"$scheduler_url":~/worker_config/
 fi
 
 echo "Setup completed!"

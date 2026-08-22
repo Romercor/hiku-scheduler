@@ -66,7 +66,7 @@ for n in $(seq 1 "$n_iterations"); do
 
     # Get worker and scheduler URL
     if [ "$mode" == "cloud" ]; then
-      cd terraform || exit 1
+      cd terraform-gcp || exit 1
       scheduler_url=$(terraform output -raw scheduler_url)
       worker_url_output=$(terraform output worker_url | tr -d '[]\n'\''" ')
       cd ..
@@ -83,7 +83,7 @@ for n in $(seq 1 "$n_iterations"); do
 
     # Set up scheduler
     if [ "$mode" == "cloud" ]; then
-      ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_rsa ec2-user@"$scheduler_url" \
+      ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_rsa ubuntu@"$scheduler_url" \
         "mkdir -p results/${balancer}/${timestamp};
         ./hiku start --config=\"worker_config/${balancer}.json\" > results/${balancer}/${timestamp}/balancer.log 2>&1 &"
     else
@@ -98,13 +98,13 @@ for n in $(seq 1 "$n_iterations"); do
     # Forward logs
     if [ "$mode" == "cloud" ]; then
       scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_rsa \
-          ec2-user@"$scheduler_url:results/${balancer}/${timestamp}/balancer.log" \
+          ubuntu@"$scheduler_url:results/${balancer}/${timestamp}/balancer.log" \
           "results/${balancer}/${timestamp}/"
 
       for worker_url in "${worker_url_list[@]}"; do
-        worker_name=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_rsa ec2-user@"$worker_url" "ls -d worker-*")
+        worker_name=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_rsa ubuntu@"$worker_url" "ls -d worker-*")
         scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_rsa \
-          ec2-user@"$worker_url:${worker_name}/worker.out" \
+          ubuntu@"$worker_url:${worker_name}/worker.out" \
           "results/${balancer}/${timestamp}/${worker_name}.log"
       done
     else

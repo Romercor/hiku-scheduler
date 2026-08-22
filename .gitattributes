@@ -1,0 +1,7 @@
+# normalize text to LF in the repo; binary rules below override for real binaries
+* text=auto eol=lf
+
+openlambda binary
+*.tar binary
+*.so binary
+*.bin binary

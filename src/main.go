@@ -5,6 +5,7 @@ import (
 
 	"hiku/config"
 	"hiku/server"
+	"hiku/steer"
 
 	"github.com/urfave/cli"
 )
@@ -22,6 +23,11 @@ func createCliApp() *cli.App {
 		Usage: "Config json file",
 		Value: "hiku.json",
 	}
+	steerConfigFlag := cli.StringFlag{
+		Name:  "config, c",
+		Usage: "Config json file",
+		Value: "steer.json",
+	}
 	app.Commands = []cli.Command{
 		cli.Command{Name: "start", Usage: "Start Hiku",
 			UsageText:   "hiku start [-c|--config=FILEPATH]",
@@ -31,6 +37,16 @@ func createCliApp() *cli.App {
 				cfgFilePath := c.String("config")
 				cfg := config.LoadConfigFromFile(cfgFilePath)
 				return server.Start(cfg.ToConfig())
+			},
+		},
+		cli.Command{Name: "steer", Usage: "Start Hiku in L4 mode",
+			UsageText:   "hiku steer [-c|--config=FILEPATH]",
+			Description: "The scheduler attaches the eBPF steering programs and populates the maps from config json file.",
+			Flags:       []cli.Flag{steerConfigFlag},
+			Action: func(c *cli.Context) error {
+				cfgFilePath := c.String("config")
+				cfg := steer.LoadConfigFromFile(cfgFilePath)
+				return steer.Start(cfg.ToConfig())
 			},
 		},
 	}
