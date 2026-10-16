@@ -12,6 +12,8 @@ func createBalancerFromConfig(c JSONConfig) balancer.Balancer {
 		return balancer.NewLeastConnectionsFromJSONSlice(c.Workers)
 	case "pull-based":
 		return balancer.NewPullBasedFromJSONSlice(c.Workers)
+	case "pull-ordered":
+		return balancer.NewPullOrderedFromJSONSlice(c.Workers)
 	case "random":
 		return balancer.NewRandomFromJSONSlice(c.Workers)
 	}

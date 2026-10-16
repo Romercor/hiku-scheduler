@@ -201,7 +201,7 @@ wait
 # Create balancer configs
 rm -rf worker_config
 mkdir -p worker_config
-for balancer in hashing-bounded least-connections pull-based random; do
+for balancer in hashing-bounded least-connections pull-based pull-ordered random; do
   echo "{
   \"host\": \"0.0.0.0\",
   \"port\": 9020,

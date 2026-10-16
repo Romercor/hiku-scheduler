@@ -35,15 +35,18 @@ func parseWorkerURLs(querySlice []string) ([]url.URL, *httputil.HttpError) {
 //
 // curl -X POST <host>:<port>/run/<lambda-name> -d '{"param0": "value0"}'
 func runHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Receive request to %s\n", r.URL.Path)
+	if httputil.Verbose {
+		log.Printf("Receive request to %s\n", r.URL.Path)
+	}
 
 	observer := httputil.NewObserverResponseWriter(w)
 	myScheduler.Run(observer, r)
 
-	log.Printf("Response Status: %d [%s]", observer.Status, r.URL.Path)
+	if httputil.Verbose {
+		log.Printf("Response Status: %d [%s]", observer.Status, r.URL.Path)
+	}
 	if observer.Status == 500 || observer.Status == 502 {
-		body := string(observer.Body)
-		log.Printf("Response Body: %s", body)
+		log.Printf("Response Body: %s", string(observer.Body))
 	}
 }
 

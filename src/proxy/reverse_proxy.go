@@ -5,6 +5,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"sync"
+	"time"
 )
 
 // ReverseProxy is an interface for an object that proxies the client HTTP
@@ -16,6 +17,14 @@ type ReverseProxy interface {
 	// with the worker as the first parameter. It is expected to send a
 	// response to the client using the ResponseWriter object.
 	ProxyRequest(workerURL url.URL, w http.ResponseWriter, r *http.Request)
+}
+
+// workerTransport keeps up to 1024 idle connections per worker: net/http's default keeps 2, so
+// under load the proxy opens a fresh TCP connection per request and exhausts the ephemeral ports.
+var workerTransport = &http.Transport{
+	MaxIdleConns:        4096,
+	MaxIdleConnsPerHost: 1024,
+	IdleConnTimeout:     90 * time.Second,
 }
 
 type HTTPReverseProxy struct {
@@ -30,6 +39,7 @@ func (p *HTTPReverseProxy) getReverseProxyForWorker(workerURL url.URL) *httputil
 	proxy := p.proxyMap[workerURL]
 	if proxy == nil {
 		proxy = httputil.NewSingleHostReverseProxy(&workerURL)
+		proxy.Transport = workerTransport
 		p.proxyMap[workerURL] = proxy
 	}
 
