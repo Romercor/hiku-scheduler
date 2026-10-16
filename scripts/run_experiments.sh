@@ -85,9 +85,9 @@ for n in $(seq 1 "$n_iterations"); do
     if [ "$mode" == "cloud" ]; then
       ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_rsa ubuntu@"$scheduler_url" \
         "mkdir -p results/${balancer}/${timestamp};
-        ./hiku start --config=\"worker_config/${balancer}.json\" > results/${balancer}/${timestamp}/balancer.log 2>&1 &"
+        HIKU_VERBOSE=1 ./hiku start --config=\"worker_config/${balancer}.json\" > results/${balancer}/${timestamp}/balancer.log 2>&1 &"
     else
-      src/bin/hiku start --config="worker_config/${balancer}.json" > "results/${balancer}/${timestamp}/balancer.log" 2>&1 &
+      HIKU_VERBOSE=1 src/bin/hiku start --config="worker_config/${balancer}.json" > "results/${balancer}/${timestamp}/balancer.log" 2>&1 &
     fi
 
     # Run load test

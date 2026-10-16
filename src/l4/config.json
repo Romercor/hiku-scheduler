@@ -1,0 +1,17 @@
+{
+  "iface": "eth1",
+  "host": "10.0.0.10",
+  "strategy": "ordered",
+  "fallback": "least-loaded",
+  "rst_feedback": true,
+  "fin_reclaim": true,
+  "workers": [
+    "10.0.0.11:5000",
+    "10.0.0.12:5001"
+  ],
+  "function_addrs": [
+    "pyaes:10.200.0.1",
+    "dd:10.200.0.2"
+  ],
+  "service_port": 8080
+}

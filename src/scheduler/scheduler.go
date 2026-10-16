@@ -37,7 +37,9 @@ func (s *Scheduler) Run(w http.ResponseWriter, r *http.Request) {
 	// Select worker and serve http
 	startTime := time.Now()
 	selectedWorkerURL, err := s.balancer.SelectWorker(r, l)
-	log.Printf("Selected worker: %s in %d ns [%s]", selectedWorkerURL.String(), time.Since(startTime).Nanoseconds(), r.URL.Path)
+	if httputil.Verbose {
+		log.Printf("Selected worker: %s in %d ns [%s]", selectedWorkerURL.String(), time.Since(startTime).Nanoseconds(), r.URL.Path)
+	}
 	if err != nil {
 		httputil.RespondWithError(w, err)
 		return

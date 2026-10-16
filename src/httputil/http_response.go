@@ -3,7 +3,12 @@ package httputil
 import (
 	"log"
 	"net/http"
+	"os"
 )
+
+// Verbose enables per-request logging (HIKU_VERBOSE); off by default because at high rates the
+// log lines limit throughput. run_experiments.sh turns it on for evaluation/plot.py.
+var Verbose = os.Getenv("HIKU_VERBOSE") != ""
 
 type HttpError struct {
 	Msg  string
@@ -51,8 +56,11 @@ func (orw *ObserverResponseWriter) Header() http.Header {
 	return orw.rw.Header()
 }
 
+// Write keeps only error bodies, the only ones ever read back.
 func (orw *ObserverResponseWriter) Write(body []byte) (int, error) {
-	orw.Body = append(orw.Body, body...)
+	if orw.Status == 500 || orw.Status == 502 {
+		orw.Body = append(orw.Body, body...)
+	}
 	return orw.rw.Write(body)
 }
 

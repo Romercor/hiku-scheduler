@@ -181,3 +181,36 @@ func TestPullBasedBalancer(t *testing.T) {
 		t.Error("expected same worker for repeated function2 request")
 	}
 }
+
+// The idle worker chosen first must not depend on the order the workers became idle in, or a
+// function would spread over more workers than its load needs.
+func TestPullOrderedBalancer(t *testing.T) {
+	balancer := balancer.NewPullOrderedFromJSONSlice(
+		[]string{"http://worker1:8080", "http://worker2:8080", "http://worker3:8080"})
+	testLambda := &lambda.Lambda{Name: "function1"}
+
+	held := make([]url.URL, 3)
+	selectAll := func() {
+		for i := range held {
+			worker, err := balancer.SelectWorker(createTestRequest("/run/function1"), testLambda)
+			if err != nil {
+				t.Fatalf("failed to select worker: %v", err)
+			}
+			held[i] = worker
+		}
+	}
+
+	selectAll()
+	for _, i := range []int{0, 1, 2} {
+		balancer.ReleaseWorker(held[i], testLambda)
+	}
+	selectAll()
+	first := held[0]
+	for _, i := range []int{2, 1, 0} {
+		balancer.ReleaseWorker(held[i], testLambda)
+	}
+	selectAll()
+	if held[0].Host != first.Host {
+		t.Errorf("expected %s first again, got %s", first.Host, held[0].Host)
+	}
+}
