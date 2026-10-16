@@ -32,6 +32,30 @@ type Config struct {
 	// port the scheduler listens to
 	Scheduler_port string `json:"scheduler_port"`
 
+	// every L4 scheduler keeps its own availability map, so each must get the signal: "host:port",
+	// comma separated; empty = Scheduler_url:Scheduler_port
+	Scheduler_peers string `json:"scheduler_peers"`
+
+	// at L4 the worker is chosen once per connection, so closing a keep-alive connection after this
+	// many requests bounds how long a client stays on one worker (0 = never)
+	Max_conn_requests int `json:"max_conn_requests"`
+
+	// re-announce every function every N ms (0 = only on change), so a lost signal does not
+	// mislead the scheduler for long
+	Signal_refresh_ms int `json:"signal_refresh_ms"`
+
+	// send at most one signal per function per N ms, carrying the latest value, so control traffic
+	// does not grow with the request rate (0 = every change)
+	Signal_coalesce_ms int `json:"signal_coalesce_ms"`
+
+	// close the connection when this worker holds no idle instance of the requested function, so
+	// the client reconnects and is scheduled again
+	Close_when_busy bool `json:"close_when_busy"`
+
+	// count every instance that holds a sandbox, busy or not, instead of only idle ones: a busy
+	// instance still holds the function, so the scheduler can prefer a worker where it is warm
+	Signal_reports_warm bool `json:"signal_reports_warm"`
+
 	// log output of the runtime and proxy?
 	Log_output bool `json:"log_output"`
 
@@ -154,21 +178,27 @@ func LoadDefaults(olPath string) error {
 	memPoolMb := Max(int(totalMb-500), 500)
 
 	Conf = &Config{
-		Worker_dir:        workerDir,
-		Server_mode:       "lambda",
-		Worker_url:        "localhost",
-		Worker_port:       "5000",
-		Scheduler_url:     "localhost",
-		Scheduler_port:    "9020",
-		Registry:          registryDir,
-		Sandbox:           "sock",
-		Log_output:        true,
-		Pkgs_dir:          packagesDir,
-		Sandbox_config:    map[string]any{},
-		SOCK_base_path:    baseImgDir,
-		Registry_cache_ms: 5000, // 5 seconds
-		Mem_pool_mb:       memPoolMb,
-		Import_cache_tree: zygoteTreePath,
+		Worker_dir:          workerDir,
+		Server_mode:         "lambda",
+		Worker_url:          "localhost",
+		Worker_port:         "5000",
+		Scheduler_url:       "localhost",
+		Scheduler_port:      "9020",
+		Scheduler_peers:     "",
+		Max_conn_requests:   0,
+		Signal_refresh_ms:   0,
+		Signal_coalesce_ms:  0,
+		Close_when_busy:     false,
+		Signal_reports_warm: false,
+		Registry:            registryDir,
+		Sandbox:             "sock",
+		Log_output:          true,
+		Pkgs_dir:            packagesDir,
+		Sandbox_config:      map[string]any{},
+		SOCK_base_path:      baseImgDir,
+		Registry_cache_ms:   5000, // 5 seconds
+		Mem_pool_mb:         memPoolMb,
+		Import_cache_tree:   zygoteTreePath,
 		Limits: LimitsConfig{
 			Procs:               10,
 			Mem_mb:              50,

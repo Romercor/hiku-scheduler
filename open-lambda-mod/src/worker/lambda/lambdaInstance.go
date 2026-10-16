@@ -41,14 +41,20 @@ func (linst *LambdaInstance) Task() {
 
 	var sb sandbox.Sandbox
 	var err error
+	instIdle := false
 
 	for {
 		// wait for a request (blocking) before making the
 		// Sandbox ready, or kill if we receive that signal
 
+		sigSetIdle(f.name, &instIdle, sb != nil)
+
 		var req *Invocation
 		select {
 		case req = <-f.instChan:
+			if !common.Conf.Signal_reports_warm {
+				sigSetIdle(f.name, &instIdle, false)
+			}
 		case killed := <-linst.killChan:
 			if sb != nil {
 				rtLog := sb.GetRuntimeLog()
@@ -99,6 +105,7 @@ func (linst *LambdaInstance) Task() {
 					}
 				}
 			}
+			sigSetIdle(f.name, &instIdle, false)
 			killed <- true
 			return
 		}
@@ -135,7 +142,7 @@ func (linst *LambdaInstance) Task() {
 				}
 			}
 
-			log.Printf("Creating new sandbox")
+			log.Printf("Creating new sandbox for %s", f.name)
 
 			// import cache is either disabled or it failed
 			if sb == nil {
@@ -248,6 +255,7 @@ func (linst *LambdaInstance) Task() {
 					}
 				}
 
+				sigSetIdle(f.name, &instIdle, false)
 				killed <- true
 				return
 			default:

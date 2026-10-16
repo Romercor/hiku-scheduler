@@ -5,10 +5,39 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"sync"
+	"sync/atomic"
 
 	"github.com/open-lambda/open-lambda/ol/common"
 	"github.com/open-lambda/open-lambda/ol/worker/lambda"
 )
+
+// connReqs lets Max_conn_requests be enforced per connection, keyed by RemoteAddr. An entry is
+// removed only at the limit, so a connection closed earlier leaves its count behind for the next
+// one on the same address and port.
+var connReqs sync.Map
+
+// closeIfSpent closes the connection after Max_conn_requests requests or, under Close_when_busy,
+// when nothing idle can serve the request, so the scheduler chooses a worker again.
+func closeIfSpent(w http.ResponseWriter, r *http.Request) {
+	busy := false
+	if common.Conf.Close_when_busy {
+		parts := getURLComponents(r)
+		busy = len(parts) >= 2 && lambda.SigIdle(parts[1]) == 0
+	}
+
+	max := common.Conf.Max_conn_requests
+	if max > 0 {
+		v, _ := connReqs.LoadOrStore(r.RemoteAddr, new(int32))
+		if atomic.AddInt32(v.(*int32), 1) >= int32(max) {
+			connReqs.Delete(r.RemoteAddr)
+			busy = true
+		}
+	}
+	if busy {
+		w.Header().Set("Connection", "close")
+	}
+}
 
 // LambdaServer is a worker server that listens to run lambda requests and forward
 // these requests to its sandboxes.
@@ -42,6 +71,8 @@ func getURLComponents(r *http.Request) []string {
 func (s *LambdaServer) RunLambda(w http.ResponseWriter, r *http.Request) {
 	t := common.T0("web-request")
 	defer t.T1()
+
+	closeIfSpent(w, r)
 
 	// TODO re-enable logging once it is configurable
 	// log.Printf("Received request to %s\n", r.URL.Path)

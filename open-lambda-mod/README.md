@@ -1,8 +1,9 @@
 # OpenLambda
 
 We did the following changes to [OpenLambda](https://github.com/open-lambda/open-lambda): (i) added endpoint
-configuration for the scheduler, (ii) introduced a notification system for sandbox destruction, and
-(iii) fixes related to cloud deployment and package pulling. For convenience, we already provide an executable binary
+configuration for the scheduler, (ii) introduced a notification system for sandbox destruction,
+(iii) fixes related to cloud deployment and package pulling, and (iv) an availability signal for the L4 scheduler
+(`worker/lambda/signal.go`) with settings for it and for closing connections. For convenience, we already provide an executable binary
 for `GOOS=linux GOARCH=amd64` with these changes.
 
 If your target platform differs, or you wish to reproduce the executable that we provide, follow the usage instructions
