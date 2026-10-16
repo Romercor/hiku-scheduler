@@ -1,6 +1,4 @@
 #!/usr/bin/bash
 
-go get github.com/urfave/cli
-go get github.com/lafikl/consistent
-go get github.com/cilium/ebpf
-go get golang.org/x/sys
+# versions are pinned in go.mod; go get would upgrade them on every build
+go mod download
