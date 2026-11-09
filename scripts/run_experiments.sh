@@ -66,7 +66,7 @@ for n in $(seq 1 "$n_iterations"); do
 
     # Get worker and scheduler URL
     if [ "$mode" == "cloud" ]; then
-      cd terraform-gcp || exit 1
+      cd "${TF_DIR:-terraform-upcloud}" || exit 1
       scheduler_url=$(terraform output -raw scheduler_url)
       worker_url_output=$(terraform output worker_url | tr -d '[]\n'\''" ')
       cd ..

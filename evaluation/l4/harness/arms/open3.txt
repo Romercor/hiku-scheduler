@@ -1,0 +1,8 @@
+# Open-loop load at 210 calls/s with and without the 30 s ramp: whether the collapse of the first
+# open-loop series came from every function starting at once.
+l7-pull-o210 l7 pull-based - NOKA=1,SLEEPSCALE=0,RATE=210,RAMP=30s,DUR=120s
+l7-pullord-o210 l7 pull-ordered - NOKA=1,SLEEPSCALE=0,RATE=210,RAMP=30s,DUR=120s
+l4-ord-least-o210 l4 ordered+least-loaded - NOKA=1,SLEEPSCALE=0,RATE=210,RAMP=30s,DUR=120s
+l7-pull-o210n l7 pull-based - NOKA=1,SLEEPSCALE=0,RATE=210,DUR=120s
+l7-pullord-o210n l7 pull-ordered - NOKA=1,SLEEPSCALE=0,RATE=210,DUR=120s
+l4-ord-least-o210n l4 ordered+least-loaded - NOKA=1,SLEEPSCALE=0,RATE=210,DUR=120s

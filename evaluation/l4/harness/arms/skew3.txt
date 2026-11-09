@@ -1,0 +1,5 @@
+# Skewed workload on the final code: every user draws the same function sample, so the popularity
+# skew of the trace reaches the workers; one seed, and so one skew, per repetition.
+l7-pull l7 pull-based - NOKA=1,SHARED=1
+l7-pullord l7 pull-ordered - NOKA=1,SHARED=1
+l4-ord-least l4 ordered+least-loaded - NOKA=1,SHARED=1

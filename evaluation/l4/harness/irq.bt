@@ -1,0 +1,6 @@
+// Time in softirq per vector and in hard irq handlers, on every CPU, for 30 s.
+tracepoint:irq:softirq_entry { @s[cpu] = nsecs; }
+tracepoint:irq:softirq_exit /@s[cpu]/ { @soft[args->vec] = @soft[args->vec] + (nsecs - @s[cpu]); @n[args->vec]++; @s[cpu] = 0; }
+tracepoint:irq:irq_handler_entry { @h[cpu] = nsecs; }
+tracepoint:irq:irq_handler_exit /@h[cpu]/ { @hard = @hard + (nsecs - @h[cpu]); @h[cpu] = 0; }
+interval:s:30 { exit(); }

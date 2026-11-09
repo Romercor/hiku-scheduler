@@ -1,0 +1,2 @@
+# Reference run between campaigns: Hiku pull-based alone, compared with the session's pilot by gate.py.
+ref-pull l7 pull-based - NOKA=1

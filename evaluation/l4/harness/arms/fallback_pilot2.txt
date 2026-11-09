@@ -1,0 +1,10 @@
+# Pilot 2: the locality-ordered pick against the full-scan random one, each with every fallback.
+# All arms one connection per call (NOKA=1); worker settings identical.
+l7-pull l7 pull-based {"signal_refresh_ms":1000,"signal_coalesce_ms":10} NOKA=1
+l4-wr-random l4 weighted-random+random {"signal_refresh_ms":1000,"signal_coalesce_ms":10} NOKA=1
+l4-wr-least l4 weighted-random+least-loaded {"signal_refresh_ms":1000,"signal_coalesce_ms":10} NOKA=1
+l4-wr-bounded l4 weighted-random+bounded {"signal_refresh_ms":1000,"signal_coalesce_ms":10} NOKA=1
+l4-ord-random l4 ordered+random {"signal_refresh_ms":1000,"signal_coalesce_ms":10} NOKA=1
+l4-ord-hashed l4 ordered+hashed {"signal_refresh_ms":1000,"signal_coalesce_ms":10} NOKA=1
+l4-ord-least l4 ordered+least-loaded {"signal_refresh_ms":1000,"signal_coalesce_ms":10} NOKA=1
+l4-ord-bounded l4 ordered+bounded {"signal_refresh_ms":1000,"signal_coalesce_ms":10} NOKA=1

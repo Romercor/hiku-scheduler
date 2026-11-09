@@ -1,0 +1,11 @@
+# Connection reuse in one campaign: the kernel scheduler with one call per connection, the worker
+# closing after 2 or 5 calls or when it holds no idle instance, and connections kept open; the
+# weighted-random pick and Hiku's pull-based and ordered balancers with connections kept open.
+l4-x1 l4 ordered+least-loaded - NOKA=1
+l4-close2 l4 ordered+least-loaded {"signal_refresh_ms":1000,"signal_coalesce_ms":10,"max_conn_requests":2} -
+l4-close5 l4 ordered+least-loaded {"signal_refresh_ms":1000,"signal_coalesce_ms":10,"max_conn_requests":5} -
+l4-busy l4 ordered+least-loaded {"signal_refresh_ms":1000,"signal_coalesce_ms":10,"close_when_busy":true} -
+l4-ka l4 ordered+least-loaded - -
+l4-wr-ka l4 weighted-random+random - -
+l7-pullord-ka l7 pull-ordered - -
+l7-pull-ka l7 pull-based - -

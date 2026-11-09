@@ -1,0 +1,15 @@
+# Strategies and fallbacks on the final code, one factor at a time around the default: each
+# strategy with the least-loaded fallback, each fallback with the ordered strategy, P2C with both
+# hashed fallbacks, naming by port, and Hiku pull-based as the anchor to the main comparison.
+l7-pull l7 pull-based - NOKA=1
+l4-ord-least l4 ordered+least-loaded - NOKA=1
+l4-wr-least l4 weighted-random+least-loaded - NOKA=1
+l4-p2c-least l4 p2c+least-loaded - NOKA=1
+l4-jsq-least l4 jsq+least-loaded - NOKA=1
+l4-ord-bounded l4 ordered+bounded - NOKA=1
+l4-ord-random l4 ordered+random - NOKA=1
+l4-ord-hashed l4 ordered+hashed - NOKA=1
+l4-ord-hashed2 l4 ordered+hashed2 - NOKA=1
+l4-p2c-hashed l4 p2c+hashed - NOKA=1
+l4-p2c-hashed2 l4 p2c+hashed2 - NOKA=1
+l4-ord-least-port l4 ordered+least-loaded - NOKA=1,MODE=l4

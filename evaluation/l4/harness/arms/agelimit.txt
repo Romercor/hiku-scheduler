@@ -1,0 +1,4 @@
+# A worker that dies: worker 1's OpenLambda is killed 120 s into the run, so its announced free
+# slots go stale; the kernel scheduler's default against Hiku's pull-based balancer.
+l4-kill l4 ordered+least-loaded - NOKA=1,KILL_AT=120
+l7-pull-kill l7 pull-based - NOKA=1,KILL_AT=120

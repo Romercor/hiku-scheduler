@@ -1,0 +1,9 @@
+# A worker that refuses connections on the final code, with a stronger stressor than refused4: worker 1
+# listens with a backlog of 1, aborts on overflow and has its vCPUs kept busy (SICK=2); refusal feedback
+# on and off, for the default and for weighted random with the random fallback; a healthy pool as the
+# control. tag arm config conc [SICK=2]
+l4-healthy l4 ordered+least-loaded 8
+l4-sick-fboff l4 ordered+least-loaded+nofb 8 SICK=2
+l4-sick-fbon l4 ordered+least-loaded 8 SICK=2
+l4wr-sick-fboff l4 weighted-random+random+nofb 8 SICK=2
+l4wr-sick-fbon l4 weighted-random+random 8 SICK=2

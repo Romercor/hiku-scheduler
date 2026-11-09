@@ -1,0 +1,11 @@
+# Final matrix: Hiku's four balancers and its pull-based one with the ordered pick against the
+# kernel scheduler with the ordered pick (bounded and least-loaded fallback) and the weighted-random
+# pick. One connection per call, worker settings identical in every arm.
+l7-pull l7 pull-based - NOKA=1
+l7-pullord l7 pull-ordered - NOKA=1
+l7-chbl l7 hashing-bounded - NOKA=1
+l7-leastconn l7 least-connections - NOKA=1
+l7-random l7 random - NOKA=1
+l4-ord-bounded l4 ordered+bounded - NOKA=1
+l4-scan l4 weighted-random+random - NOKA=1
+l4-ord-least l4 ordered+least-loaded - NOKA=1

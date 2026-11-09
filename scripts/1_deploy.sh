@@ -11,7 +11,7 @@ if [ $# -ne 1 ]; then
   exit 1
 fi
 
-cd terraform-gcp || exit 1
+cd "${TF_DIR:-terraform-upcloud}" || exit 1
 terraform init
 terraform apply -auto-approve -var "n_workers=$1"
 

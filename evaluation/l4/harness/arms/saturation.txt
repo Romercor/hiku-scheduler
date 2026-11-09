@@ -1,0 +1,5 @@
+# The scheduler as the only bottleneck: backends that answer in 2 ms and never start cold
+# (pool.sh with WARM=2 COLD=0 KEEP=600 and a fixed RATE). tag arm config conc
+l7-pull l7 pull-based 8
+l7-pullord l7 pull-ordered 8
+l4-ord-least l4 ordered+least-loaded 8

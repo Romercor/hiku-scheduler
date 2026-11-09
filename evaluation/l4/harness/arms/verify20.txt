@@ -1,0 +1,23 @@
+# Every strategy with every fallback, 30 s at 20 calls/s: each configuration must load, pass the
+# verifier and steer calls on this code. The last line names functions by port instead of address.
+v-weighted-random-random l4 weighted-random+random - NOKA=1,SLEEPSCALE=0,RATE=20,DUR=30s
+v-weighted-random-hashed l4 weighted-random+hashed - NOKA=1,SLEEPSCALE=0,RATE=20,DUR=30s
+v-weighted-random-hashed2 l4 weighted-random+hashed2 - NOKA=1,SLEEPSCALE=0,RATE=20,DUR=30s
+v-weighted-random-least-loaded l4 weighted-random+least-loaded - NOKA=1,SLEEPSCALE=0,RATE=20,DUR=30s
+v-weighted-random-bounded l4 weighted-random+bounded - NOKA=1,SLEEPSCALE=0,RATE=20,DUR=30s
+v-p2c-random l4 p2c+random - NOKA=1,SLEEPSCALE=0,RATE=20,DUR=30s
+v-p2c-hashed l4 p2c+hashed - NOKA=1,SLEEPSCALE=0,RATE=20,DUR=30s
+v-p2c-hashed2 l4 p2c+hashed2 - NOKA=1,SLEEPSCALE=0,RATE=20,DUR=30s
+v-p2c-least-loaded l4 p2c+least-loaded - NOKA=1,SLEEPSCALE=0,RATE=20,DUR=30s
+v-p2c-bounded l4 p2c+bounded - NOKA=1,SLEEPSCALE=0,RATE=20,DUR=30s
+v-jsq-random l4 jsq+random - NOKA=1,SLEEPSCALE=0,RATE=20,DUR=30s
+v-jsq-hashed l4 jsq+hashed - NOKA=1,SLEEPSCALE=0,RATE=20,DUR=30s
+v-jsq-hashed2 l4 jsq+hashed2 - NOKA=1,SLEEPSCALE=0,RATE=20,DUR=30s
+v-jsq-least-loaded l4 jsq+least-loaded - NOKA=1,SLEEPSCALE=0,RATE=20,DUR=30s
+v-jsq-bounded l4 jsq+bounded - NOKA=1,SLEEPSCALE=0,RATE=20,DUR=30s
+v-ordered-random l4 ordered+random - NOKA=1,SLEEPSCALE=0,RATE=20,DUR=30s
+v-ordered-hashed l4 ordered+hashed - NOKA=1,SLEEPSCALE=0,RATE=20,DUR=30s
+v-ordered-hashed2 l4 ordered+hashed2 - NOKA=1,SLEEPSCALE=0,RATE=20,DUR=30s
+v-ordered-least-loaded l4 ordered+least-loaded - NOKA=1,SLEEPSCALE=0,RATE=20,DUR=30s
+v-ordered-bounded l4 ordered+bounded - NOKA=1,SLEEPSCALE=0,RATE=20,DUR=30s
+v-ordered-least-loaded-port l4 ordered+least-loaded - NOKA=1,SLEEPSCALE=0,RATE=20,DUR=30s,MODE=l4

@@ -1,0 +1,14 @@
+# Several schedulers in one campaign: 1, 2 or 4 schedulers at the default 10 ms coalescing, 1 or 4
+# at 0 and 50 ms, the weighted-random pick, and 1.5 times the paper's load. tag n_sched config
+# coalesce_ms vuscale
+c10-s1 1 ordered+least-loaded 10 1
+c10-s2 2 ordered+least-loaded 10 1
+c10-s4 4 ordered+least-loaded 10 1
+c0-s1 1 ordered+least-loaded 0 1
+c0-s4 4 ordered+least-loaded 0 1
+c50-s1 1 ordered+least-loaded 50 1
+c50-s4 4 ordered+least-loaded 50 1
+wr-s1 1 weighted-random+random 10 1
+wr-s4 4 weighted-random+random 10 1
+x15-s1 1 ordered+least-loaded 10 1.5
+x15-s4 4 ordered+least-loaded 10 1.5

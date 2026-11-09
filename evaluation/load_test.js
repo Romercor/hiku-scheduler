@@ -8,6 +8,17 @@ const SCHEDULER_DNS = __ENV.SCHEDULER_DNS;
 
 const scheduler = `http://${SCHEDULER_DNS}:9020/run`;
 
+// The L4 scheduler sees no URL path, so the function must be in the port (l4: BASE_PORT + index)
+// or in the address (l4addr: 10.200.0.x on one port, routed to the scheduler, owned by no machine).
+const MODE = __ENV.MODE || 'l7';
+const BASE_PORT = Number(__ENV.BASE_PORT || 5100);
+const ADDR_BASE = (10 << 24) | (200 << 16);
+const SERVICE_PORT = Number(__ENV.SERVICE_PORT || 8080);
+const funcAddr = (i) => {
+    const v = (ADDR_BASE + i + 1) >>> 0;
+    return `${(v >>> 24) & 255}.${(v >>> 16) & 255}.${(v >>> 8) & 255}.${v & 255}`;
+};
+
 const benchmarks = [
     "chameleon",
     "dd",
@@ -20,18 +31,21 @@ const benchmarks = [
 ];
 
 const funcProbabilities = new SharedArray('funcProbabilities', function () {
-    return [JSON.parse(open('azure_function_probabilities.json'))];
+    return [JSON.parse(open(__ENV.PROBS || 'azure_function_probabilities.json'))];
 });
 let uniqueFuncs = Object.keys(funcProbabilities[0]);
 
 // Pseudo-random number generator for fair evaluation of different strategies
 // Generate a unique seed for each VU based on its __VU ID
 randomSeed(SEED);
-const seedgen = () => (__VU * 10000 + Math.random() * 2 ** 32) >>> 0;
+const seedgen = (vu = __VU) => (vu * 10000 + Math.random() * 2 ** 32) >>> 0;
 const getRand = sfc32(seedgen(), seedgen(), seedgen(), seedgen());
+// SHARED=1 gives every VU the same function sample, so the popularity skew of the trace reaches
+// the workers; by default each VU draws its own and the skews average out over the VUs.
+const sampleRand = __ENV.SHARED === '1' ? sfc32(seedgen(0), seedgen(0), seedgen(0), seedgen(0)) : getRand;
 
 // Randomly sample functions
-let sampledFuncs = uniqueFuncs.sort(() => getRand() - 0.5).slice(0, benchmarks.length * N_COPIES);
+let sampledFuncs = uniqueFuncs.sort(() => sampleRand() - 0.5).slice(0, benchmarks.length * N_COPIES);
 
 // Filter out sampled functions
 const sampledProbDict = Object.fromEntries(
@@ -145,35 +159,74 @@ export default function () {
         },
     };
 
-    const url = `${scheduler}/${funcName}`;
+    const dash = funcName.lastIndexOf('-');
+    const index = Number(funcName.slice(dash + 1)) * benchmarks.length
+        + benchmarks.indexOf(funcName.slice(0, dash));
+    const port = BASE_PORT + index;
+    let url;
+    if (MODE === 'l4addr') {
+        url = `http://${funcAddr(index)}:${SERVICE_PORT}/run/${funcName}`;
+    } else if (MODE === 'l4') {
+        url = `http://${SCHEDULER_DNS}:${port}/run/${funcName}`;
+    } else {
+        url = `${scheduler}/${funcName}`;
+    }
     let res = http.post(url, payload, params);
     check(res, {
         'status is 200': (r) => r.status === 200,
     });
 
-    sleep(getRand() * 0.9 + 0.1);
+    sleep((getRand() * 0.9 + 0.1) * SLEEPSCALE);
 }
 
+// SLEEPSCALE and VUSCALE lowered together give fewer, busier VUs at about the same load, so each
+// connection carries more requests. VUSCALE alone splits the profile across k6 instances.
+const SLEEPSCALE = Number(__ENV.SLEEPSCALE || 1);
+const VUSCALE = Number(__ENV.VUSCALE || 1);
+const vus = (n) => Math.max(1, Math.round(n * VUSCALE));
+
+// NOKA=1 opens a connection per request, since L4 picks a worker per connection and L7 per request.
+// RATE=<req/s> is an open loop held for DUR, so the load does not slow down with the system (use
+// SLEEPSCALE=0); RAMP=<time> first rises from a fifth of it, so not every function starts at once.
 export const options = {
     discardResponseBodies: true,
-    scenarios: {
+    noConnectionReuse: __ENV.NOKA === '1',
+    scenarios: __ENV.RATE ? {
+        open_loop: Object.assign({
+            timeUnit: '1s',
+            preAllocatedVUs: 500,
+            maxVUs: 3000,
+            gracefulStop: '0s',
+        }, __ENV.RAMP ? {
+            executor: 'ramping-arrival-rate',
+            startRate: Math.round(Number(__ENV.RATE) / 5),
+            stages: [
+                {target: Number(__ENV.RATE), duration: __ENV.RAMP},
+                {target: Number(__ENV.RATE), duration: __ENV.DUR || '120s'},
+            ],
+        } : {
+            executor: 'constant-arrival-rate',
+            rate: Number(__ENV.RATE),
+            duration: __ENV.DUR || '120s',
+        }),
+    } : {
         low_load: {
             executor: 'constant-vus',
-            vus: 20,
+            vus: vus(20),
             duration: '100s',
             startTime: '0s',
             gracefulStop: '0s',
         },
         medium_load: {
             executor: 'constant-vus',
-            vus: 50,
+            vus: vus(50),
             duration: '100s',
             startTime: '100s',
             gracefulStop: '0s',
         },
         high_load: {
             executor: 'constant-vus',
-            vus: 100,
+            vus: vus(100),
             duration: '100s',
             startTime: '200s',
             gracefulStop: '0s',

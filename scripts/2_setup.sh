@@ -129,7 +129,7 @@ fi
 
 # Retrieve worker URL
 if [ "$mode" == "cloud" ]; then
-  cd terraform-gcp || exit 1
+  cd "${TF_DIR:-terraform-upcloud}" || exit 1
   scheduler_url=$(terraform output -raw scheduler_url)
   worker_url=$(terraform output worker_url | tr -d '[]\n'\''" ')
   scheduler_internal=$(terraform output -raw scheduler_internal)

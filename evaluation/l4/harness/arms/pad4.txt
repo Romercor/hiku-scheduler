@@ -1,0 +1,5 @@
+# A large address table on the final code: the default configuration with the function address
+# table padded to 100,000 and 1,000,000 entries that are never called.
+l4-pad0 l4 ordered+least-loaded - NOKA=1
+l4-pad100k l4 ordered+least-loaded+pad100000 - NOKA=1
+l4-pad1m l4 ordered+least-loaded+pad1000000 - NOKA=1

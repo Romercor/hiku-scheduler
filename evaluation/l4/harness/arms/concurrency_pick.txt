@@ -1,0 +1,8 @@
+# Is the cold-start penalty the ordered pick, and does it depend on the keep-alive? Run once with
+# KEEP=10 and once with KEEP=30. tag arm config conc
+l7-pull-c1 l7 pull-based 1
+l4-c1 l4 ordered+bounded 1
+l4-scan-c1 l4 weighted-random+random 1
+l7-pull-c4 l7 pull-based 4
+l4-c4 l4 ordered+bounded 4
+l4-scan-c4 l4 weighted-random+random 4

@@ -27,7 +27,7 @@ fi
 exec 2>/dev/null
 
 if [ "$mode" == "cloud" ]; then
-  cd terraform-gcp || exit 1
+  cd "${TF_DIR:-terraform-upcloud}" || exit 1
   terraform destroy -auto-approve
   cd ..
 

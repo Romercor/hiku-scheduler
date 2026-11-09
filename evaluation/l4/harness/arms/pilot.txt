@@ -1,0 +1,4 @@
+# Session pilot: Hiku pull-based and the kernel scheduler's default, checked by gate.py against the
+# bands of the final comparison before a session spends its hours.
+l7-pull l7 pull-based - NOKA=1
+l4-ord-least l4 ordered+least-loaded - NOKA=1

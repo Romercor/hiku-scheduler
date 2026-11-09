@@ -1,0 +1,12 @@
+# Pilot: which pick strategy and which cold-miss fallback. Every arm opens one connection per
+# call (NOKA=1), the system model of a gateway in front; l7-pull-ka is the paper's own condition.
+# tag            arm  config                        worker overrides                                     k6 env
+l7-pull-ka       l7   pull-based                    {"signal_refresh_ms":1000,"signal_coalesce_ms":10}   -
+l7-pull          l7   pull-based                    {"signal_refresh_ms":1000,"signal_coalesce_ms":10}   NOKA=1
+l4-p2c-hashed    l4   p2c+hashed                    {"signal_refresh_ms":1000,"signal_coalesce_ms":10}   NOKA=1
+l4-p2c-least     l4   p2c+least-loaded              {"signal_refresh_ms":1000,"signal_coalesce_ms":10}   NOKA=1
+l4-p2c-bounded   l4   p2c+bounded                   {"signal_refresh_ms":1000,"signal_coalesce_ms":10}   NOKA=1
+l4-wr-random     l4   weighted-random+random        {"signal_refresh_ms":1000,"signal_coalesce_ms":10}   NOKA=1
+l4-wr-hashed     l4   weighted-random+hashed        {"signal_refresh_ms":1000,"signal_coalesce_ms":10}   NOKA=1
+l4-wr-least      l4   weighted-random+least-loaded  {"signal_refresh_ms":1000,"signal_coalesce_ms":10}   NOKA=1
+l4-wr-bounded    l4   weighted-random+bounded       {"signal_refresh_ms":1000,"signal_coalesce_ms":10}   NOKA=1

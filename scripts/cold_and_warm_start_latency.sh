@@ -27,7 +27,7 @@ deploy_worker() {
 }
 
 get_worker_url() {
-    cd terraform-gcp || exit 1
+    cd "${TF_DIR:-terraform-upcloud}" || exit 1
     worker_url_output=$(terraform output worker_url | tr -d '[]\n'\''" ')
     cd ..
     worker_url_output=${worker_url_output::-1}

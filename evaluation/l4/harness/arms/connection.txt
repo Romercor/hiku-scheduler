@@ -1,0 +1,9 @@
+# Deciding once per connection: the paper's load with one connection per call and with connections
+# kept open, and a profile of few busy users that makes connections long (VUSCALE, SLEEPSCALE).
+l4-x1 l4 ordered+least-loaded - NOKA=1
+l4-ka l4 ordered+least-loaded - -
+l7-pull-ka l7 pull-based - -
+l7-pullord-ka l7 pull-ordered - -
+l4-long l4 ordered+least-loaded - VUSCALE=0.12,SLEEPSCALE=0.05
+l7-pull-long l7 pull-based - VUSCALE=0.12,SLEEPSCALE=0.05
+l7-pullord-long l7 pull-ordered - VUSCALE=0.12,SLEEPSCALE=0.05

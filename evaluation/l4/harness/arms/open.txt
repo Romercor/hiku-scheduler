@@ -1,0 +1,17 @@
+# Open-loop load on the paper's functions: a fixed arrival rate held for 120 s, at rates around
+# the point where the five workers saturate.
+l7-pull-o125 l7 pull-based - NOKA=1,SLEEPSCALE=0,RATE=125
+l7-pullord-o125 l7 pull-ordered - NOKA=1,SLEEPSCALE=0,RATE=125
+l4-ord-least-o125 l4 ordered+least-loaded - NOKA=1,SLEEPSCALE=0,RATE=125
+l7-pull-o150 l7 pull-based - NOKA=1,SLEEPSCALE=0,RATE=150
+l7-pullord-o150 l7 pull-ordered - NOKA=1,SLEEPSCALE=0,RATE=150
+l4-ord-least-o150 l4 ordered+least-loaded - NOKA=1,SLEEPSCALE=0,RATE=150
+l7-pull-o175 l7 pull-based - NOKA=1,SLEEPSCALE=0,RATE=175
+l7-pullord-o175 l7 pull-ordered - NOKA=1,SLEEPSCALE=0,RATE=175
+l4-ord-least-o175 l4 ordered+least-loaded - NOKA=1,SLEEPSCALE=0,RATE=175
+l7-pull-o200 l7 pull-based - NOKA=1,SLEEPSCALE=0,RATE=200
+l7-pullord-o200 l7 pull-ordered - NOKA=1,SLEEPSCALE=0,RATE=200
+l4-ord-least-o200 l4 ordered+least-loaded - NOKA=1,SLEEPSCALE=0,RATE=200
+l7-pull-o225 l7 pull-based - NOKA=1,SLEEPSCALE=0,RATE=225
+l7-pullord-o225 l7 pull-ordered - NOKA=1,SLEEPSCALE=0,RATE=225
+l4-ord-least-o225 l4 ordered+least-loaded - NOKA=1,SLEEPSCALE=0,RATE=225

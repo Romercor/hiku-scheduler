@@ -1,0 +1,14 @@
+# Instance concurrency 1, 2, 4, 8 under Hiku pull, Hiku least-connections and the kernel
+# scheduler. tag arm config conc
+l7-pull-c1 l7 pull-based 1
+l7-lc-c1 l7 least-connections 1
+l4-c1 l4 ordered+bounded 1
+l7-pull-c2 l7 pull-based 2
+l7-lc-c2 l7 least-connections 2
+l4-c2 l4 ordered+bounded 2
+l7-pull-c4 l7 pull-based 4
+l7-lc-c4 l7 least-connections 4
+l4-c4 l4 ordered+bounded 4
+l7-pull-c8 l7 pull-based 8
+l7-lc-c8 l7 least-connections 8
+l4-c8 l4 ordered+bounded 8

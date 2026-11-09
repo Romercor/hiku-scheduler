@@ -31,3 +31,14 @@ worker-*/
 worker_config/
 plots/
 ol-min.tar
+
+# Terraform state backups under non-standard names
+*.tfstate.*
+
+# Generated per-deployment configs and trace tables
+l4_*.json
+l7.json
+evaluation/l4/trace.funcs
+evaluation/l4/trace.json
+
+__pycache__/

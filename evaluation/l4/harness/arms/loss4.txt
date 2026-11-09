@@ -1,0 +1,5 @@
+# Lost announcements on the final code: each worker drops 1% of its announcements, with the default
+# refresh of 1 s and with a refresh every 500 ms, against no loss; the default configuration.
+l4-noloss l4 ordered+least-loaded - NOKA=1
+l4-loss l4 ordered+least-loaded - NOKA=1,LOSS=0.01
+l4-loss-r500 l4 ordered+least-loaded {"signal_refresh_ms":500,"signal_coalesce_ms":10} NOKA=1,LOSS=0.01
