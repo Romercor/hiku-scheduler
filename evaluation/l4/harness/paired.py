@@ -5,6 +5,7 @@
 # Why: the arms of a repetition share a seed and the cluster's state of that hour, so the
 # differences within a repetition are far less noisy than the arms' means.
 # args: <campaign_dir> <armA> <armB> [metric,...] | <campaign_dir> --positions [metric]
+#   env: SKIP (comma-separated repetitions to leave out)
 import csv, glob, math, os, re, statistics as st, sys
 
 DEFAULT = ["cold_pct", "to1_pct", "to2_pct", "p50", "p95", "p99", "throughput", "cov", "fail_pct"]
@@ -60,7 +61,7 @@ def churn(d):
 def load(camp):
     runs = {}
     for r in csv.DictReader(open(os.path.join(camp, "runs.csv"))):
-        if float(r["requests"] or 0) <= 0:
+        if float(r["requests"] or 0) <= 0 or r["rep"] in os.environ.get("SKIP", "").split(","):
             continue
         if not r.get("to1_pct"):
             r["to1_pct"], r["to2_pct"] = churn(os.path.join(camp, "%s_r%s" % (r["tag"], r["rep"])))

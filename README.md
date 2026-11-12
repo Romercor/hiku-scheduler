@@ -109,7 +109,9 @@ comments in `load_test.js` list all options.
 `evaluation/l4/harness/` runs the experiments of the thesis on a cluster in `terraform-upcloud/`. Each experiment is an
 arms file in `harness/arms/`, run by `matrix.sh` (OpenLambda workers), `multi.sh` (several schedulers) or `pool.sh`
 (synthetic workers); `paired.py` computes the paired differences. The comment at the top of each script gives its
-usage.
+usage. The raw data of the thesis is attached to the release
+[thesis-v1](https://github.com/Romercor/hiku-scheduler/releases/tag/thesis-v1), whose README maps each result to
+its command.
 
 ### Supported Load Balancing Strategies
 

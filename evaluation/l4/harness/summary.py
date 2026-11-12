@@ -8,8 +8,9 @@ out = sys.argv[1]
 rows = [r for r in csv.DictReader(open(os.path.join(out, "runs.csv")))]
 order = [l.split()[0] for l in open(os.path.join(out, "arms.txt")) if l.strip() and not l.startswith("#")]
 cols = [("throughput", "thrupt/s", 1), ("p50", "p50 ms", 1), ("p95", "p95 ms", 0), ("p99", "p99 ms", 0),
-        ("cold_pct", "cold %", 1), ("cov", "CoV", 3), ("fail_pct", "fail %", 2), ("sched_cpu", "cpu %", 2),
-        ("conn_max", "conn max ms", 0)]
+        ("cold_pct", "cold %", 2), ("cov", "CoV", 3), ("fail_pct", "fail %", 2), ("sched_cpu", "cpu %", 2),
+        ("conn_max", "conn max ms", 0), ("inst_seconds", "inst s", 0)]
+cols = [c for c in cols if rows and c[0] in rows[0]]
 
 
 def ms(v, nd):
@@ -25,6 +26,6 @@ for tag in order + sorted({r["tag"] for r in rows} - set(order)):
     bad = sum(1 for r in rows if r["tag"] == tag) - len(rs)
     if not rs:
         continue
-    miss = [100.0 * float(r["no_free"]) / float(r["flows"]) for r in rs if r["flows"] and float(r["flows"]) > 0]
+    miss = [100.0 * float(r["no_free"]) / float(r["flows"]) for r in rs if r.get("flows") and float(r["flows"]) > 0]
     print("| %s | %d%s | %s | %s |" % (tag, len(rs), " (+%d void)" % bad if bad else "",
           " | ".join(ms([float(r[c[0]]) for r in rs], c[2]) for c in cols), ms(miss, 1) + " %" if miss else "-"))
