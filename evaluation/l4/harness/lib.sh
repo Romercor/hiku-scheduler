@@ -51,7 +51,7 @@ prep_cluster() {   # scheduler_index...
   for i in "$@"; do
     sshx "${SPUB[$i]}" "test -x /app/hiku" || { echo "PREP FAILED: no /app/hiku on scheduler $i"; return 1; }
   done
-  scpx evaluation/load_test.js evaluation/*_function_probabilities.json ubuntu@"${CL[0]}":~
+  scpx evaluation/load_test.js evaluation/*_function_probabilities.json evaluation/replay_*.json ubuntu@"${CL[0]}":~
   sshx "${CL[0]}" "command -v mpstat >/dev/null || sudo apt-get -o DPkg::Lock::Timeout=600 install -y -qq sysstat >/dev/null 2>&1"
   if ! sshx "${CL[0]}" "command -v k6 >/dev/null"; then
     scpx /usr/local/bin/k6 ubuntu@"${CL[0]}":~/k6
@@ -73,10 +73,11 @@ stop_workers() {
   done
 }
 
-reset_workers() {   # overrides_json outfile
-  local pids=() rc=0
+reset_workers() {   # overrides_json outfile; env RELOAD_MS sets OpenLambda's registry_cache_ms in every arm
+  local pids=() rc=0 ov=$1
+  [ -n "${RELOAD_MS:-}" ] && ov=$(jq -c --argjson r "$RELOAD_MS" '. + {registry_cache_ms: $r}' <<< "$ov")
   for i in $(seq 0 $((NW-1))); do
-    sshx "${WP[$i]}" "bash ~/reset_ol.sh $((5000+i)) '$1'" >> "$2" 2>&1 &
+    sshx "${WP[$i]}" "bash ~/reset_ol.sh $((5000+i)) '$ov'" >> "$2" 2>&1 &
     pids+=($!)
   done
   for p in "${pids[@]}"; do wait "$p" || rc=1; done
@@ -85,6 +86,7 @@ reset_workers() {   # overrides_json outfile
 
 sched_logs() {   # dir scheduler_public_ip [suffix]
   sshx "$2" "sudo pkill -x mpstat; cat /tmp/mpstat.log" > "$1/mpstat$3.log" 2>/dev/null || true
+  sshx "$2" "cat /tmp/mpstat_cpu.log" > "$1/mpstat_cpu$3.log" 2>/dev/null || true
   sshx "$2" "sleep 6; head -4 /tmp/sched.log; tail -2 /tmp/sched.log; sudo bpftool prog show 2>/dev/null | grep -A1 -E 'name (nat|availability) '" > "$1/sched$3.log" 2>/dev/null || true
 }
 
@@ -97,7 +99,7 @@ worker_logs() {   # dir
 }
 
 client_mon_start() {
-  sshx "${CL[0]}" "pkill -x mpstat; setsid nohup mpstat 5 > /tmp/client_mpstat.log 2>&1 < /dev/null &"
+  sshx "${CL[0]}" "pkill -x mpstat; setsid nohup mpstat 5 > /tmp/client_mpstat.log 2>&1 < /dev/null &" || true
 }
 
 client_mon_stop() {   # dir

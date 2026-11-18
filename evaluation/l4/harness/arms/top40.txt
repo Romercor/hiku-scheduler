@@ -1,0 +1,5 @@
+# The file's own popularity: every virtual user calls the 40 most popular Azure functions with their
+# renormalised probabilities (TOP=1), no code reload, paper load.
+l7-pull l7 pull-based {"signal_refresh_ms":1000,"signal_coalesce_ms":10,"registry_cache_ms":3600000} NOKA=1,TOP=1
+l7-pullord l7 pull-ordered {"signal_refresh_ms":1000,"signal_coalesce_ms":10,"registry_cache_ms":3600000} NOKA=1,TOP=1
+l4-ord-least l4 ordered+least-loaded {"signal_refresh_ms":1000,"signal_coalesce_ms":10,"registry_cache_ms":3600000} NOKA=1,TOP=1

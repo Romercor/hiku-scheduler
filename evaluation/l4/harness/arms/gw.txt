@@ -1,0 +1,4 @@
+# Gateway: k6 keeps its connections to an nginx gateway on the client; nginx forwards to Hiku over kept-open
+# connections (gw-l7) or opens one connection per call to the function's port on the L4 scheduler (gw-l4).
+gw-l7 l7 pull-based 8 GW=l7
+gw-l4 l4 ordered+least-loaded 8 GW=l4

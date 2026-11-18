@@ -1,6 +1,7 @@
 import http from 'k6/http';
 import {check, randomSeed, sleep} from 'k6';
 import {SharedArray} from 'k6/data';
+import exec from 'k6/execution';
 
 const N_COPIES = __ENV.N_COPIES;
 const SEED = __ENV.SEED;
@@ -44,8 +45,34 @@ const getRand = sfc32(seedgen(), seedgen(), seedgen(), seedgen());
 // the workers; by default each VU draws its own and the skews average out over the VUs.
 const sampleRand = __ENV.SHARED === '1' ? sfc32(seedgen(0), seedgen(0), seedgen(0), seedgen(0)) : getRand;
 
+// REPLAY=<file> replays a window of a trace: for each second, the calls of each deployed function (index
+// copy * benchmarks + benchmark, as in benchmarkMap). {r} in the name is the repetition (SEED - 1000), so
+// every arm of a repetition replays the same window. REPLAYSCALE scales every second alike.
+const REPLAY = __ENV.REPLAY ? __ENV.REPLAY.replace('{r}', String(Number(SEED) - 1000)) : '';
+const replaySecs = REPLAY ? new SharedArray('replay', () => JSON.parse(open(REPLAY)).secs) : null;
+const replayTotal = REPLAY ? new SharedArray('replayTotal', () => [JSON.parse(open(REPLAY)).total])[0] : null;
+const REPLAYSCALE = Number(__ENV.REPLAYSCALE || 1);
+
+function replayIndex() {
+    const now = Math.floor((Date.now() - exec.scenario.startTime) / 1000);
+    for (let s = Math.min(replaySecs.length - 1, Math.max(0, now)); s >= 0; s--) {
+        const row = replaySecs[s];
+        const sum = row.reduce((a, b) => a + b, 0);
+        if (sum === 0) continue;
+        let x = getRand() * sum;
+        for (let i = 0; i < row.length; i++) {
+            x -= row[i];
+            if (x < 0) return i;
+        }
+        return row.length - 1;
+    }
+    return 0;
+}
+
 // Randomly sample functions
-let sampledFuncs = uniqueFuncs.sort(() => sampleRand() - 0.5).slice(0, benchmarks.length * N_COPIES);
+let sampledFuncs = __ENV.TOP === '1'
+    ? ((p) => uniqueFuncs.sort((a, b) => p[b]["probability"] - p[a]["probability"]))(funcProbabilities[0]).slice(0, benchmarks.length * N_COPIES)
+    : uniqueFuncs.sort(() => sampleRand() - 0.5).slice(0, benchmarks.length * N_COPIES);
 
 // Filter out sampled functions
 const sampledProbDict = Object.fromEntries(
@@ -136,7 +163,7 @@ function sfc32(a, b, c, d) {
 
 export default function () {
     // Randomly choose a function based on probability distribution
-    const chosenFunc = weightedRandomChoice(sampledProbDict);
+    const chosenFunc = REPLAY ? null : weightedRandomChoice(sampledProbDict);
 
     // Map chosen function to benchmark
     let benchmarkMap = {};
@@ -147,7 +174,7 @@ export default function () {
         }
     }
 
-    const funcName = benchmarkMap[sampledFuncs.indexOf(chosenFunc)];
+    const funcName = benchmarkMap[REPLAY ? replayIndex() : sampledFuncs.indexOf(chosenFunc)];
 
     // Build payload and params
     const benchmark = funcName.split('-')[0];
@@ -176,7 +203,7 @@ export default function () {
         'status is 200': (r) => r.status === 200,
     });
 
-    sleep((getRand() * 0.9 + 0.1) * SLEEPSCALE);
+    if (!REPLAY) sleep((getRand() * 0.9 + 0.1) * SLEEPSCALE);
 }
 
 // SLEEPSCALE and VUSCALE lowered together give fewer, busier VUs at about the same load, so each
@@ -191,7 +218,24 @@ const vus = (n) => Math.max(1, Math.round(n * VUSCALE));
 export const options = {
     discardResponseBodies: true,
     noConnectionReuse: __ENV.NOKA === '1',
-    scenarios: __ENV.RATE ? {
+    scenarios: REPLAY ? {
+        replay: {
+            executor: 'ramping-arrival-rate', startRate: Math.round(replayTotal[0] * REPLAYSCALE), timeUnit: '1s',
+            preAllocatedVUs: 500, maxVUs: 3000, gracefulStop: '0s',
+            stages: replayTotal.map((t) => ({target: Math.round(t * REPLAYSCALE), duration: '1s'})),
+        },
+    } : __ENV.BURST ? {
+        burst: (() => {
+            const [lo, hi, period] = __ENV.BURST.split(':').map(Number);
+            const total = parseInt(__ENV.DUR || '300'), half = period / 2, stages = [];
+            for (let t = 0, high = false; t < total; t += half, high = !high) {
+                const r = high ? hi : lo;
+                stages.push({target: r, duration: '1s'}, {target: r, duration: (half - 1) + 's'});
+            }
+            return {executor: 'ramping-arrival-rate', startRate: lo, timeUnit: '1s', preAllocatedVUs: 500,
+                    maxVUs: 3000, gracefulStop: '0s', stages: stages};
+        })(),
+    } : __ENV.RATE ? {
         open_loop: Object.assign({
             timeUnit: '1s',
             preAllocatedVUs: 500,

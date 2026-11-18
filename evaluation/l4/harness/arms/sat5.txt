@@ -1,0 +1,6 @@
+# Saturation with one connection per call, rates stepped from 4,000 to 24,000 calls/s: Hiku's proxy, Hiku's
+# proxy with the client keeping its connections open (a gateway that reuses connections), and the L4 default.
+# tag arm config conc [extra]
+l7-pull l7 pull-based 8
+l7-pull-ka l7 pull-based 8 NOKA=0
+l4-ord-least l4 ordered+least-loaded 8

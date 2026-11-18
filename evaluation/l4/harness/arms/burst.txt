@@ -1,0 +1,5 @@
+# Bursts: open loop alternating 30 s at 50 and 30 s at 130 calls/s for 300 s, the file's own popularity
+# (TOP=1), no code reload, one connection per call.
+l7-pull l7 pull-based {"signal_refresh_ms":1000,"signal_coalesce_ms":10,"registry_cache_ms":3600000} NOKA=1,TOP=1,BURST=50:130:60,DUR=300
+l7-pullord l7 pull-ordered {"signal_refresh_ms":1000,"signal_coalesce_ms":10,"registry_cache_ms":3600000} NOKA=1,TOP=1,BURST=50:130:60,DUR=300
+l4-ord-least l4 ordered+least-loaded {"signal_refresh_ms":1000,"signal_coalesce_ms":10,"registry_cache_ms":3600000} NOKA=1,TOP=1,BURST=50:130:60,DUR=300

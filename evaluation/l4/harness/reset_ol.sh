@@ -42,7 +42,7 @@ if ! pgrep -f openlambda >/dev/null; then
   fi
 fi
 
-DEFAULTS='{"max_conn_requests":0,"scheduler_peers":"","signal_refresh_ms":0,"signal_coalesce_ms":0,"close_when_busy":false,"signal_reports_warm":false}'
+DEFAULTS='{"max_conn_requests":0,"scheduler_peers":"","signal_refresh_ms":0,"signal_coalesce_ms":0,"close_when_busy":false,"signal_reports_warm":false,"registry_cache_ms":5000}'
 if jq --argjson d "$DEFAULTS" --argjson ov "${2:-{\}}" '. * $d * $ov' "$D/config.json" > /tmp/olcfg.json 2>/dev/null; then
   sudo cp /tmp/olcfg.json "$D/config.json"
 else

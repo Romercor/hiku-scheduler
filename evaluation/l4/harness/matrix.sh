@@ -51,6 +51,7 @@ run_one() {   # campaign rep position tag arm config overrides k6env
   fi
   client_mon_stop "$d"
   scpx ubuntu@"$CLIENT":/tmp/sum.json "$d/summary.json" || true
+  grep -q "running (" "$d/k6.log" || rm -f "$d/summary.json"   # k6 never started: drop the previous run's summary
   sched_logs "$d" "$SCHED"
   worker_logs "$d"
   echo "$4 $arm $6 $ov $8 probs=$PROBS seed=$((1000 + $2)) $(provenance "$SCHED")" > "$d/arm.txt"

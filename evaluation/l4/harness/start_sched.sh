@@ -20,3 +20,4 @@ else
   if pgrep -x hiku >/dev/null; then echo "L4 $2 UP"; else echo "L4 $2 FAILED"; tail -15 /tmp/sched.log; exit 1; fi
 fi
 setsid nohup mpstat 5 > /tmp/mpstat.log 2>&1 < /dev/null &
+setsid nohup mpstat -P ALL 5 > /tmp/mpstat_cpu.log 2>&1 < /dev/null &

@@ -8,6 +8,7 @@
 # usage: pool.sh prep | run <campaign> <arms_file> <reps> [first_rep]
 #   env: RATE (req/s, 400) or BURST (low,high,seconds) DUR (120s) WARM COLD (ms, 50 250) KEEP (s, 10)
 #        PROBS (azure) NOKA (1 = one connection per request) SIGNAL (coalesce and refresh, ms)
+#        PREVUS MAXVUS (k6 virtual users, 400 4000)
 # After a run at >= 1,000 new connections/s it waits 65 s, as the next scheduler starts its NAT port
 # walk at the first port while the workers still hold those ports in TIME-WAIT.
 set -e
@@ -15,7 +16,7 @@ set -e
 cd "$REPO"
 SCHED=${SPUB[0]} SCHED_INT=${SPRV[0]} CLIENT=${CL[0]}
 RATE=${RATE:-400} DUR=${DUR:-120s} WARM=${WARM:-50} COLD=${COLD:-250} KEEP=${KEEP:-10} PROBS=${PROBS:-azure}
-NOKA=${NOKA:-1} SIGNAL=${SIGNAL:-10 1000} VUS="-e VUS=400 -e MAXVUS=4000"
+NOKA=${NOKA:-1} SIGNAL=${SIGNAL:-10 1000} VUS="-e VUS=${PREVUS:-400} -e MAXVUS=${MAXVUS:-4000}"
 
 phase_prep() {
   (cd evaluation/l4 && CGO_ENABLED=0 go build -o /tmp/poolbackend poolbackend.go)
@@ -27,7 +28,10 @@ phase_prep() {
 }
 
 run_one() {   # campaign rep position tag arm config conc [extra]
-  local d="$OUT/$1/${4}_r$2" arm=$5 env pre
+  local d="$OUT/$1/${4}_r$2" arm=$5 env pre noka=$NOKA
+  [[ "${8:-}" = NOKA=* ]] && noka=${8#NOKA=}
+  local gw="" mode=$arm target=$SCHED_INT
+  [[ "${8:-}" = GW=* ]] && { gw=${8#GW=}; noka=0; mode=l7; target=127.0.0.1; }
   wait_net "$SCHED" || { echo "  ABORT: no network"; exit 1; }
   rm -rf "$d"; mkdir -p "$d"
   echo "--- ${4}_r$2 (position $3) ---"
@@ -38,24 +42,32 @@ run_one() {   # campaign rep position tag arm config conc [extra]
         [ "${8:-}" = SICK=2 ] && pre="$pre for c in 1 2 3 4; do setsid nohup timeout 100 sh -c 'while :; do :; done' > /dev/null 2>&1 < /dev/null & done;"
       else pre="sudo sysctl -qw net.core.somaxconn=4096 net.ipv4.tcp_abort_on_overflow=0;"; fi
     fi
-    sshx "${WP[$i]}" "$pre pkill -x poolbackend; sleep 1; setsid nohup ./poolbackend $((5000+i)) worker-$((i+1)) $SCHED_INT $((i+1)) $WARM $COLD $KEEP $7 $SIGNAL > pool.log 2>&1 < /dev/null & sleep 1; cat pool.log" >> "$d/workers.txt" 2>&1 &
+    sshx "${WP[$i]}" "$pre pkill -x poolbackend; sleep 1; setsid nohup ./poolbackend $((5000+i)) worker-$((i+1)) $SCHED_INT $((i+1)) $WARM $COLD $KEEP $7 $SIGNAL > pool.log 2>&1 < /dev/null & pkill -x mpstat; setsid nohup mpstat 5 > ~/mpstat_w.log 2>&1 < /dev/null & sleep 1; cat pool.log" >> "$d/workers.txt" 2>&1 &
   done
   wait
   if ! sshx "$SCHED" "bash ~/start_sched.sh $arm '$6'" > "$d/sched_start.txt" 2>&1; then
     echo "  SKIPPED: scheduler failed"; cat "$d/sched_start.txt"; return 0
   fi
-  env="-e FUNCS=trace.json -e MODE=$arm -e SCHED=$SCHED_INT -e RATE=$RATE -e DUR=$DUR -e BURST=$BURST"
+  if [ -n "$gw" ]; then sshx "$CLIENT" "sudo cp ~/gw_$gw.conf /etc/nginx/nginx.conf && sudo nginx -t -q && sudo systemctl restart nginx && sleep 2 && systemctl is-active nginx" >> "$d/gateway.txt" 2>&1 || { echo "  SKIPPED: gateway"; return 0; }; fi
+  env="-e FUNCS=trace.json -e MODE=$mode -e SCHED=$target -e RATE=$RATE -e DUR=$DUR -e BURST=$BURST"
+  for h in "$CLIENT" "${WP[@]}"; do sshx "$h" "nstat -n" & done; wait
   client_mon_start
-  sshx "$CLIENT" "$K6 $env -e NOKA=$NOKA -e N_WORKERS=$NW $VUS --summary-export=/tmp/sum.json trace.js" > "$d/k6.log" 2>&1 || true
+  sshx "$CLIENT" "$K6 $env -e NOKA=$noka -e N_WORKERS=$NW $VUS --summary-export=/tmp/sum.json trace.js" > "$d/k6.log" 2>&1 || true
   client_mon_stop "$d"
+  sshx "$CLIENT" "nstat -az" > "$d/client.nstat" 2>&1 || true
+  for i in $(seq 0 $((NW-1))); do
+    sshx "${WP[$i]}" "nstat -az; echo TIMEWAIT \$(ss -tan state time-wait | tail -n +2 | wc -l); cat ~/mpstat_w.log 2>/dev/null" > "$d/worker-$((i+1)).nstat" 2>&1 &
+  done
+  wait
   scpx ubuntu@"$CLIENT":/tmp/sum.json "$d/summary.json" || true
+  grep -q "running (" "$d/k6.log" || rm -f "$d/summary.json"   # k6 never started: drop the previous run's summary
   sched_logs "$d" "$SCHED"
   for i in $(seq 0 $((NW-1))); do
     sshx "${WP[$i]}" "curl -s localhost:$((5000+i))/stats" >> "$d/stats.txt" 2>/dev/null || true
   done
   echo "$4 $arm $6 conc=$7 ${8:-} $(provenance "$SCHED")" > "$d/arm.txt"
   python3 "$H/pool_row.py" "$OUT/$1" "$4" "$2" "$3" "$7" "$NW" || echo "  (parse failed)"
-  if [ "$NOKA" = 1 ] && [ "${RATE%%[!0-9]*}" -ge 1000 ]; then sleep 65; fi
+  if [ "$noka" = 1 ] && [ "${RATE%%[!0-9]*}" -ge 1000 ]; then sleep 65; fi
 }
 
 phase_run() {   # campaign arms_file reps [first_rep]

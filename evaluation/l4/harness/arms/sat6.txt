@@ -1,0 +1,4 @@
+# Saturation beyond 20,000 calls/s and the TIME-WAIT worst case (workers' tcp_max_tw_buckets 262144):
+# the L4 default with one connection per call, and Hiku's proxy with the client keeping connections open.
+l7-pull-ka l7 pull-based 8 NOKA=0
+l4-ord-least l4 ordered+least-loaded 8

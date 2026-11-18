@@ -8,6 +8,7 @@
 # usage: multi.sh prep | run <campaign> <reps> <config> <n_sched>... | runfile <campaign> <cells_file> <reps> [first_rep]
 #   env: K (k6 instances, 4) VUSCALE (total load against the paper's profile, 1)
 #        COALESCE (the workers' signal coalescing, ms, 10) FIRST (first repetition number, 1)
+#        REPLAY_M (replay the IBM window of the repetition scaled to this mean, times the cell's load)
 set -e
 . "$(dirname "$0")/lib.sh"
 cd "$REPO"
@@ -44,6 +45,7 @@ run_one() {   # campaign rep position config n_sched tag coalesce_ms vuscale
   for c in $(seq 0 $((K-1))); do
     env="-e N_COPIES=$N_COPIES -e SEED=$((1000 + c * 1000 + $2)) -e SCHEDULER_DNS=${SPRV[$((c % ns))]} -e MODE=l4"
     env="$env -e NOKA=1 -e VUSCALE=$(python3 -c "print($8/$K)")"
+    [ -n "${REPLAY_M:-}" ] && env="$env -e REPLAY=replay_ibm${REPLAY_M}_$2.json -e REPLAYSCALE=$(python3 -c "print($8 / $K)")"
     sshx "$CLIENT" "$K6 $env --summary-export=/tmp/sum$c.json load_test.js" > "$d/k6-$c.log" 2>&1 &
   done
   wait

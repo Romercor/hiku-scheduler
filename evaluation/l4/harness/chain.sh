@@ -17,11 +17,11 @@ finish() {
   echo "=== $(date -u +%FT%TZ) destroy"
   for _ in $(seq 1 120); do
     (cd terraform-upcloud && terraform destroy -auto-approve -input=false -no-color | tail -1) &&
-      [ "$(api server | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["servers"]["server"]))' 2>/dev/null)" = 0 ] && break
+      [ "$(api server | python3 -c 'import json,sys; print(len([s for s in json.load(sys.stdin)["servers"]["server"] if s["hostname"] != "ibmtrace"]))' 2>/dev/null)" = 0 ] && break
     echo "destroy not confirmed, retrying in 60 s"
     sleep 60
   done
-  echo "=== servers: $(api server | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["servers"]["server"]))')" \
+  echo "=== servers: $(api server | python3 -c 'import json,sys; print(len([s for s in json.load(sys.stdin)["servers"]["server"] if s["hostname"] != "ibmtrace"]))')" \
     "storages: $(api storage/private | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["storages"]["storage"]))')" \
     "credits: $(api account | python3 -c 'import json,sys; print(json.load(sys.stdin)["account"]["credits"] / 100)')"
 }
