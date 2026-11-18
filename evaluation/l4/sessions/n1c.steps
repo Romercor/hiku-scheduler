@@ -1,0 +1,2 @@
+bash evaluation/l4/harness/cluster.sh health
+bash evaluation/l4/harness/matrix.sh run bur3 evaluation/l4/harness/arms/burst.txt 4

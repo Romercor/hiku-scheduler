@@ -1,0 +1,9 @@
+cp /root/rt/prework/tf_sat.tfvars terraform-upcloud/terraform.tfvars
+bash evaluation/l4/harness/cluster.sh up && bash evaluation/l4/harness/cluster.sh cpu | tee /tmp/cpu.txt && . evaluation/l4/harness/lib.sh && awk -v ip=${SPUB[0]} '$1==ip {f=1; if ($(NF-1) > 0.40) exit 1} END {if (!f) exit 1}' /tmp/cpu.txt
+bash scripts/2_setup.sh -m cloud 5 5 > /root/rt/prework/n2_setup.log 2>&1; r=$?; tail -3 /root/rt/prework/n2_setup.log; exit $r
+bash evaluation/l4/harness/kernel.sh
+bash evaluation/l4/harness/matrix.sh prep
+bash evaluation/l4/harness/cluster.sh health
+bash evaluation/l4/harness/pool.sh prep
+. evaluation/l4/harness/lib.sh && sshx ${CL[0]} "sudo sysctl -w net.ipv4.ip_local_port_range='1024 65535' net.ipv4.tcp_tw_reuse=1"
+bash /root/rt/prework/sat_loop.sh

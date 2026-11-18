@@ -1,0 +1,10 @@
+cp /root/rt/prework/tf_ol.tfvars terraform-upcloud/terraform.tfvars
+bash evaluation/l4/harness/cluster.sh up && bash evaluation/l4/harness/cluster.sh cpu | tee /tmp/cpu.txt && . evaluation/l4/harness/lib.sh && awk -v ip=${SPUB[0]} '$1==ip {f=1; if ($(NF-1) > 0.40) exit 1} END {if (!f) exit 1}' /tmp/cpu.txt
+bash scripts/2_setup.sh -m cloud 5 5 > /root/rt/prework/n1_setup.log 2>&1; r=$?; tail -3 /root/rt/prework/n1_setup.log; exit $r
+bash evaluation/l4/harness/kernel.sh
+bash evaluation/l4/harness/matrix.sh prep
+bash evaluation/l4/harness/cluster.sh health
+bash evaluation/l4/harness/matrix.sh run rl1 evaluation/l4/harness/arms/reload.txt 4
+grep -h registry_cache_ms results/l4/rl1/l7-pull_r1/workers.txt | head -2; grep -q 3600000 results/l4/rl1/l7-pull_r1/workers.txt && grep -q '"registry_cache_ms":5000' results/l4/rl1/l7-pull-r5s_r1/workers.txt
+bash evaluation/l4/harness/matrix.sh run top1 evaluation/l4/harness/arms/top40.txt 4
+bash evaluation/l4/harness/matrix.sh run bur1 evaluation/l4/harness/arms/burst.txt 4

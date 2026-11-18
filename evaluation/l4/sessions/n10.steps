@@ -1,0 +1,8 @@
+cp /root/rt/prework/tf_multi.tfvars terraform-upcloud/terraform.tfvars
+bash evaluation/l4/harness/cluster.sh up && for a in $(seq 1 4); do bash evaluation/l4/harness/cluster.sh cpu | tee /tmp/cpu.txt; . evaluation/l4/harness/lib.sh; awk -v ip=${SPUB[0]} '$1==ip {f=1; if ($(NF-1) > 0.40) exit 1} END {if (!f) exit 1}' /tmp/cpu.txt && exit 0; echo "slow scheduler, replacing it (attempt $a)"; (cd terraform-upcloud && terraform destroy -auto-approve -input=false -no-color -target=upcloud_server.scheduler | tail -1; sleep 90; terraform apply -auto-approve -input=false -no-color | tail -1); sleep 30; bash evaluation/l4/harness/cluster.sh up > /dev/null; done; exit 1
+bash scripts/2_setup.sh -m cloud 5 5 > /root/rt/prework/n10_setup.log 2>&1; r=$?; tail -3 /root/rt/prework/n10_setup.log; exit $r
+bash evaluation/l4/harness/kernel.sh
+bash evaluation/l4/harness/multi.sh prep
+bash evaluation/l4/harness/cluster.sh health
+RELOAD_MS= bash evaluation/l4/harness/multi.sh runfile pilot_s10 evaluation/l4/harness/arms/pilot_multi.txt 1; python3 evaluation/l4/harness/arms_check.py results/l4/pilot_s10 1 || true
+M=$(cat /root/rt/prework/replay_mean); echo "replay mean $M"; REPLAY_M=$M bash evaluation/l4/harness/multi.sh runfile multi3_ibm10 evaluation/l4/harness/arms/multi3.txt 5 && { python3 evaluation/l4/harness/arms_check.py results/l4/multi3_ibm10 5 | tail -25; true; }

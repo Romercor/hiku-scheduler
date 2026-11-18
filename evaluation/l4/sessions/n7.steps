@@ -1,0 +1,15 @@
+cp /root/rt/prework/tf_sat.tfvars terraform-upcloud/terraform.tfvars
+bash evaluation/l4/harness/cluster.sh up && for a in $(seq 1 4); do bash evaluation/l4/harness/cluster.sh cpu | tee /tmp/cpu.txt; . evaluation/l4/harness/lib.sh; awk -v ip=${SPUB[0]} '$1==ip {f=1; if ($(NF-1) > 0.40) exit 1} END {if (!f) exit 1}' /tmp/cpu.txt && exit 0; echo "slow scheduler, replacing it (attempt $a)"; (cd terraform-upcloud && terraform destroy -auto-approve -input=false -no-color -target=upcloud_server.scheduler | tail -1; sleep 90; terraform apply -auto-approve -input=false -no-color | tail -1); sleep 30; bash evaluation/l4/harness/cluster.sh up > /dev/null; done; exit 1
+bash scripts/2_setup.sh -m cloud 5 5 > /root/rt/prework/n7_setup.log 2>&1; r=$?; tail -3 /root/rt/prework/n7_setup.log; exit $r
+bash evaluation/l4/harness/kernel.sh
+bash evaluation/l4/harness/matrix.sh prep
+bash evaluation/l4/harness/cluster.sh health
+bash evaluation/l4/harness/pool.sh prep
+. evaluation/l4/harness/lib.sh && sshx ${CL[0]} "sudo sysctl -w net.ipv4.ip_local_port_range='1024 65535' net.ipv4.tcp_tw_reuse=1"
+. evaluation/l4/harness/lib.sh && for w in ${WP[@]}; do sshx $w "sudo sysctl -w net.ipv4.tcp_max_tw_buckets=262144"; done
+. evaluation/l4/harness/lib.sh && sshx ${SPUB[0]} "nproc; ip -br link; for i in \$(ls /sys/class/net | grep -v lo); do sudo ethtool -l \$i 2>/dev/null | tail -5; done; grep -E 'virtio|eth' /proc/interrupts | head -20" > /root/rt/prework/n7_sched_nic.txt 2>&1; cat /root/rt/prework/n7_sched_nic.txt
+bash /root/rt/prework/sat7_loop.sh
+bash /root/rt/prework/lim7_loop.sh
+bash /root/rt/prework/cal7_loop.sh
+. evaluation/l4/harness/lib.sh && python3 /root/rt/prework/gen_gw.py /tmp/trace.json ${SPRV[0]} /tmp && scpx /tmp/gw_l7.conf /tmp/gw_l4.conf ubuntu@${CL[0]}:~ && sshx ${CL[0]} "sudo apt-get -o DPkg::Lock::Timeout=600 install -y -qq nginx >/dev/null 2>&1; for c in l7 l4; do sudo cp ~/gw_\$c.conf /etc/nginx/nginx.conf && sudo nginx -t; done"
+bash /root/rt/prework/gw7_loop.sh
